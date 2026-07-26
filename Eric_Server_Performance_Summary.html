@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Eric System — Incident Summary</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1720; --panel:#16212c; --line:#26343f;
+    --text:#e7edf2; --sub:#8fa3b3; --accent:#4fb0ff;
+    --bad:#f0563d; --warn:#f5a623; --good:#3ecf8e;
+    --mono:'SF Mono',Consolas,'Roboto Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.55;}
+  header{padding:32px 36px 20px;border-bottom:1px solid var(--line);}
+  header h1{margin:0 0 6px;font-size:24px;font-weight:650;}
+  header p{margin:0;color:var(--sub);font-size:14px;}
+  main{padding:28px 36px 60px;max-width:980px;margin:0 auto;}
+  h2{font-size:16px;font-weight:650;margin:36px 0 12px;}
+  .tldr{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:8px;}
+  .tldr ul{margin:0;padding-left:20px;}
+  .tldr li{margin-bottom:8px;font-size:14.5px;}
+  .cards{display:grid;grid-template-columns:1fr;gap:12px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 20px;display:flex;gap:14px;align-items:flex-start;}
+  .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0;}
+  .dot.bad{background:var(--bad);}
+  .dot.warn{background:var(--warn);}
+  .dot.good{background:var(--good);}
+  .card-body{flex:1;}
+  .card-title{font-weight:650;font-size:14.5px;margin-bottom:4px;}
+  .card-title .status{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:99px;margin-left:8px;vertical-align:middle;}
+  .status.bad{background:rgba(240,86,61,.15);color:var(--bad);}
+  .status.warn{background:rgba(245,166,35,.15);color:var(--warn);}
+  .status.good{background:rgba(62,207,142,.15);color:var(--good);}
+  .card-body p{margin:4px 0 0;font-size:13.5px;color:#c7d2da;}
+  .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
+  @media (max-width:800px){.chart-row{grid-template-columns:1fr;}}
+  .chart-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;}
+  .chart-panel canvas{max-height:220px;}
+  ol.actions{padding-left:22px;margin:0;}
+  ol.actions li{margin-bottom:10px;font-size:14px;}
+  ol.actions b{color:var(--accent);}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
+  th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);}
+  th{color:var(--sub);font-weight:600;font-size:11px;text-transform:uppercase;}
+  code{background:#1b2833;padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:12px;}
+  footer{padding:20px 36px 40px;color:var(--sub);font-size:11.5px;border-top:1px solid var(--line);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Eric System — Slowdown Investigation: Summary</h1>
+  <p>WebDirect enhancement (19 Jul release) · R7 &amp; R10 · plain-language version</p>
+</header>
+
+<main>
+
+<div class="tldr">
+  <ul>
+    <li><b>Main cause:</b> since the release, two tables (129 and 147) are getting hit with 17–80x more database lookups than before, and each lookup is 6–11x slower. This is the real reason things feel slow — for everyone, not just mobile users.</li>
+    <li><b>Not the cause:</b> image uploads from the mobile app aren't compressed, but that's not what's making things slow right now — data confirms upload traffic didn't actually increase.</li>
+    <li><b>Not a factor:</b> each new work order gets its own separate photo/document folder, so concurrent mobile uploads don't collide with each other.</li>
+    <li><b>Also found:</b> a nightly cleanup job is now taking much longer than it used to, on both servers.</li>
+    <li><b>Hardware:</b> not the cause. The two database servers could use a bit more CPU as a buffer; the web servers are fine as-is.</li>
+  </ul>
+</div>
+
+<h2>What we found, at a glance</h2>
+<div class="cards">
+
+  <div class="card">
+    <div class="dot bad"></div>
+    <div class="card-body">
+      <div class="card-title">Two tables are overloaded <span class="status bad">Main cause</span></div>
+      <p>Tables 129 and 147 went from a trickle of lookups to a flood right after the 19th — on both servers, independently. Table 129 is driven by the mobile app; table 147 is driven by desktop users, which means something in the release affected people who aren't even using the new mobile feature.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="dot bad"></div>
+    <div class="card-body">
+      <div class="card-title">Nightly cleanup job got much slower <span class="status warn">New finding</span></div>
+      <p>A routine overnight job ("Purge Old Alerts") now takes several minutes instead of seconds, every night, on both servers. Separate issue from the main one — worth its own fix.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="dot good"></div>
+    <div class="card-body">
+      <div class="card-title">Photo storage: not a bottleneck <span class="status good">Ruled out</span></div>
+      <p>Each new work order gets its own separate folder for photos/documents, so different trades uploading at the same time write to different folders and don't collide. Not a factor in the current slowdown.</p>
+      <p style="margin-top:8px;">Why Explorer feeling slow to browse doesn't mean FileMaker is slow: Explorer has to open and read every single folder just to display the list — with 3M+ files that's naturally sluggish. FileMaker never does that. When it needs a specific work order's documents, it already knows the exact folder name (the WO number) and goes straight to it in one step, the same way you'd go straight to a specific house on a street if you already had the address, instead of walking past every house first. The total number of files elsewhere in <code>DOCUMENTS</code> doesn't add any extra work to that lookup.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="dot good"></div>
+    <div class="card-body">
+      <div class="card-title">Image compression: not the cause <span class="status good">Ruled out</span></div>
+      <p>Yes, mobile photos aren't compressed before upload — but the data shows upload traffic didn't actually go up after the release. Still worth compressing eventually, just not an emergency.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="dot good"></div>
+    <div class="card-body">
+      <div class="card-title">Hardware: not the cause <span class="status good">Ruled out</span></div>
+      <p>The servers aren't struggling for resources on average. The two database servers occasionally max out all 4 CPU cores at once during bad moments — a small CPU bump would give breathing room, but won't fix the underlying issue. The web servers have plenty of spare capacity already.</p>
+    </div>
+  </div>
+
+</div>
+
+<h2>The hardware picture, visually</h2>
+<div class="chart-row">
+  <div class="chart-panel"><canvas id="cpuChart"></canvas></div>
+  <div class="chart-panel"><canvas id="memChart"></canvas></div>
+</div>
+
+<h2>What to do next</h2>
+<ol class="actions">
+  <li><b>Get Digital Fusion to look at tables 129 and 147</b> — specifically whether the new filter uses an unindexed/unstored field, and whether it's running far more lookups than it needs to. This is the actual fix.</li>
+  <li><b>Check the nightly "Purge Old Alerts" job</b> — same kind of question: is it scanning an unindexed field on a table that's grown a lot recently?</li>
+  <li><b>Hold off on buying more hardware</b> for now — fix the above first, then re-check. A modest CPU increase on the database servers is reasonable as a buffer, not an emergency.</li>
+</ol>
+
+</main>
+
+<footer>
+  Sources: FileMaker Server query/lock logs (R7 &amp; R10, 16–24 Jul 2026), Windows Performance Monitor captures (23–24 Jul 2026), and a full folder-structure scan of the container storage on both servers. A more detailed technical writeup with all supporting figures is available on request.
+</footer>
+
+<script>
+const textColor = '#8fa3b3';
+const gridColor = 'rgba(255,255,255,0.06)';
+
+new Chart(document.getElementById('cpuChart'), {
+  type:'bar',
+  data:{labels:['R7 DB','R10 DB','R7 Web','R10 Web'], datasets:[
+    {label:'Typical CPU use %', data:[10,9,2,2], backgroundColor:'#4fb0ff'},
+    {label:'Worst moment %', data:[100,100,25,33], backgroundColor:'#f5a623'}
+  ]},
+  options:{responsive:true, plugins:{title:{display:true,text:'CPU usage: typical vs. worst moment',color:'#e7edf2'}, legend:{labels:{color:textColor}}},
+    scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor},grid:{color:gridColor}, max:110}}}
+});
+
+new Chart(document.getElementById('memChart'), {
+  type:'bar',
+  data:{labels:['R7 DB','R10 DB','R7 Web','R10 Web'], datasets:[
+    {label:'Free RAM, typical (MB)', data:[7336,8142,3120,3086], backgroundColor:'#3ecf8e'},
+    {label:'Free RAM, worst moment (MB)', data:[4421,4546,1892,1758], backgroundColor:'#f0563d'}
+  ]},
+  options:{responsive:true, plugins:{title:{display:true,text:'Free RAM: typical vs. worst moment',color:'#e7edf2'}, legend:{labels:{color:textColor}}},
+    scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor},grid:{color:gridColor}}}}
+});
+</script>
+
+</body>
+</html>
