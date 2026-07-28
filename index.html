@@ -6,154 +6,318 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root{
-    --bg:#0f1720; --panel:#16212c; --line:#26343f;
+    --bg:#0f1720; --panel:#16212c; --panel2:#1b2833; --line:#26343f;
     --text:#e7edf2; --sub:#8fa3b3; --accent:#4fb0ff;
     --bad:#f0563d; --warn:#f5a623; --good:#3ecf8e;
     --mono:'SF Mono',Consolas,'Roboto Mono',monospace;
   }
   *{box-sizing:border-box;}
   body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.55;}
-  header{padding:32px 36px 20px;border-bottom:1px solid var(--line);}
-  header h1{margin:0 0 6px;font-size:24px;font-weight:650;}
+  header{padding:32px 36px 22px;border-bottom:1px solid var(--line);}
+  header .eyebrow{color:var(--accent);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
+  header h1{margin:0 0 6px;font-size:25px;font-weight:650;letter-spacing:-.01em;}
   header p{margin:0;color:var(--sub);font-size:14px;}
-  main{padding:28px 36px 60px;max-width:980px;margin:0 auto;}
-  h2{font-size:16px;font-weight:650;margin:36px 0 12px;}
-  .tldr{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:8px;}
-  .tldr ul{margin:0;padding-left:20px;}
-  .tldr li{margin-bottom:8px;font-size:14.5px;}
-  .cards{display:grid;grid-template-columns:1fr;gap:12px;}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 20px;display:flex;gap:14px;align-items:flex-start;}
-  .dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0;}
-  .dot.bad{background:var(--bad);}
-  .dot.warn{background:var(--warn);}
+  header .updated{display:inline-block;margin-top:14px;font-size:12px;color:var(--sub);background:var(--panel);border:1px solid var(--line);padding:5px 12px;border-radius:99px;}
+  main{padding:30px 36px 60px;max-width:1000px;margin:0 auto;}
+  h2{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin:44px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+  h2:first-of-type{margin-top:0;}
+  h3{font-size:15.5px;font-weight:650;margin:0 0 4px;}
+
+  .bottomline{background:linear-gradient(165deg,#182634,#141f2a);border:1px solid var(--line);border-radius:14px;padding:24px 26px;margin-bottom:8px;}
+  .bottomline p{margin:0 0 10px;font-size:14.5px;color:#dbe4ea;}
+  .bottomline p:last-child{margin-bottom:0;}
+  .bottomline b{color:var(--text);}
+
+  .timeline{display:flex;gap:0;margin-top:20px;overflow-x:auto;}
+  .tl-step{flex:1;min-width:150px;position:relative;padding:0 14px 0 0;}
+  .tl-step:not(:last-child)::after{content:'';position:absolute;top:5px;right:0;width:100%;height:1px;background:var(--line);}
+  .tl-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-bottom:10px;position:relative;z-index:1;}
+  .tl-dot.good{background:var(--good);}
+  .tl-date{font-size:11px;color:var(--sub);font-family:var(--mono);}
+  .tl-label{font-size:12.5px;margin-top:2px;color:#c7d2da;}
+
+  .status-group{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:760px){.status-group{grid-template-columns:1fr;} .timeline{flex-direction:column;gap:14px;} .tl-step::after{display:none;}}
+  .issue-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;}
+  .issue-card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;}
+  .pill{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:99px;white-space:nowrap;}
+  .pill.bad{background:rgba(240,86,61,.15);color:var(--bad);}
+  .pill.warn{background:rgba(245,166,35,.15);color:var(--warn);}
+  .pill.good{background:rgba(62,207,142,.15);color:var(--good);}
+  .issue-card p{margin:0 0 8px;font-size:13.5px;color:#c7d2da;}
+  .issue-card p:last-child{margin-bottom:0;}
+  .mini-stats{display:flex;gap:16px;margin:12px 0;padding:12px 14px;background:var(--panel2);border-radius:8px;flex-wrap:wrap;}
+  .mini-stat{font-size:12px;}
+  .mini-stat b{display:block;font-size:16px;font-family:var(--mono);color:var(--text);}
+  .mini-stat span{color:var(--sub);}
+
+  .cards{display:grid;grid-template-columns:1fr;gap:10px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;display:flex;gap:12px;align-items:flex-start;}
+  .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex-shrink:0;}
   .dot.good{background:var(--good);}
-  .card-body{flex:1;}
-  .card-title{font-weight:650;font-size:14.5px;margin-bottom:4px;}
-  .card-title .status{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 8px;border-radius:99px;margin-left:8px;vertical-align:middle;}
-  .status.bad{background:rgba(240,86,61,.15);color:var(--bad);}
-  .status.warn{background:rgba(245,166,35,.15);color:var(--warn);}
-  .status.good{background:rgba(62,207,142,.15);color:var(--good);}
-  .card-body p{margin:4px 0 0;font-size:13.5px;color:#c7d2da;}
-  .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
+  .dot.warn{background:var(--warn);}
+  .card-title{font-weight:650;font-size:13.5px;}
+  .card p{margin:4px 0 0;font-size:13px;color:#aebccb;}
+
+  .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px;}
   @media (max-width:800px){.chart-row{grid-template-columns:1fr;}}
   .chart-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;}
   .chart-panel canvas{max-height:220px;}
-  ol.actions{padding-left:22px;margin:0;}
-  ol.actions li{margin-bottom:10px;font-size:14px;}
+
+  ol.actions{padding-left:22px;margin:0;counter-reset:step;}
+  ol.actions li{margin-bottom:14px;font-size:14px;padding-left:2px;}
   ol.actions b{color:var(--accent);}
-  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;}
+  ol.actions .why{display:block;color:var(--sub);font-size:12.5px;margin-top:2px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
   th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);}
   th{color:var(--sub);font-weight:600;font-size:11px;text-transform:uppercase;}
   code{background:#1b2833;padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:12px;}
-  footer{padding:20px 36px 40px;color:var(--sub);font-size:11.5px;border-top:1px solid var(--line);}
+  footer{padding:22px 36px 44px;color:var(--sub);font-size:11.5px;border-top:1px solid var(--line);max-width:1000px;margin:0 auto;}
+
+  .hint{border-bottom:1.5px dotted var(--accent);cursor:help;position:relative;display:inline-block;}
+  .hint::after{
+    content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%) translateY(4px);
+    width:max-content;max-width:260px;background:#0a1219;border:1px solid var(--line);color:#dbe4ea;
+    padding:10px 12px;border-radius:8px;font-size:11.5px;font-weight:400;line-height:1.55;white-space:pre-line;
+    text-align:left;box-shadow:0 10px 28px rgba(0,0,0,.5);z-index:30;
+    opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease, transform .12s ease;
+  }
+  .hint::before{
+    content:'';position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);
+    border:6px solid transparent;border-top-color:var(--line);z-index:31;
+    opacity:0;visibility:hidden;transition:opacity .12s ease;
+  }
+  .hint:hover::after, .hint:hover::before{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);}
+  .mini-stat b.hint{font-size:16px;font-family:var(--mono);}
+  .card-title .hint{font-weight:650;}
+  @media (max-width:600px){ .hint::after{max-width:200px;left:0;transform:translateX(0) translateY(4px);} .hint:hover::after{transform:translateX(0) translateY(0);} .hint::before{left:14px;transform:translateX(0);} }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Eric System — Slowdown Investigation: Summary</h1>
-  <p>WebDirect enhancement (19 Jul release) · R7 &amp; R10 · plain-language version</p>
+  <div class="eyebrow">Incident summary · plain-language version</div>
+  <h1>Eric System — Slowdown Investigation</h1>
+  <p>What happened, what we've confirmed, and what's still being fixed — for Switched On stakeholders</p>
+  <div class="updated">Updated through 28 Jul, end of day <span style="opacity:.7;">— dotted numbers show more detail on hover</span></div>
 </header>
 
 <main>
 
-<div class="tldr">
-  <ul>
-    <li><b>Main cause:</b> since the release, two tables (129 and 147) are getting hit with 17–80x more database lookups than before, and each lookup is 6–11x slower. This is the real reason things feel slow — for everyone, not just mobile users.</li>
-    <li><b>Update — temporary fix is working:</b> filters were turned off for all mobile users (except one customer group) on 28 Jul. The overload on the mobile-driven table dropped 4–5x overnight, confirming that's really the problem. This buys time but isn't the permanent fix.</li>
-    <li><b>Not the cause:</b> image uploads from the mobile app aren't compressed, but that's not what's making things slow right now — data confirms upload traffic didn't actually increase.</li>
-    <li><b>Not a factor:</b> each new work order gets its own separate photo/document folder, so concurrent mobile uploads don't collide with each other.</li>
-    <li><b>Also found:</b> a nightly cleanup job is now taking much longer than it used to, on both servers.</li>
-    <li><b>Hardware:</b> not the cause. The two database servers could use a bit more CPU as a buffer; the web servers are fine as-is.</li>
-  </ul>
+<h2>Bottom line</h2>
+<div class="bottomline">
+  <p>The slowdown was caused by a filter introduced in the <b>19 Jul enhancement</b> that made two screens — <b>Charge Work</b> and <b>Docs</b> — run far more database lookups than before, each one slower too. That's confirmed and reproduced independently on both regional servers.</p>
+  <p>On <b>28 Jul</b> we switched the filter off for everyone except Switched On (KO) customer logins, as a temporary measure. That fixed the Docs tab for everyone except KO customers, who still have the filter on and are still visibly slower there — expected, and will be resolved once the filter itself is fixed.</p>
+  <p>The Charge Work tab is more complicated: the workaround cut the overload, but afternoon data on the 28th uncovered a <b>second, separate problem</b> — several trade accounts colliding with each other on the same records, causing sharp multi-second freezes independent of KO or the filter. That still needs a fix from Digital Fusion.</p>
+  <p>Hardware, image upload size, and folder structure have all been ruled out as causes. A hardware upgrade is happening anyway on 29–30 Jul as a sensible buffer, but it's not a substitute for the software fixes above.</p>
 </div>
 
-<h2>What we found, at a glance</h2>
+<div class="timeline">
+  <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">Sun 19 Jul</div><div class="tl-label">Enhancement released — new Docs filtering + mobile work order photos</div></div>
+  <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">16–24 Jul</div><div class="tl-label">Investigation: root cause traced to filter logic on Charge Work &amp; Docs</div></div>
+  <div class="tl-step"><div class="tl-dot good"></div><div class="tl-date">Tue 28 Jul, AM</div><div class="tl-label">Filter switched off for everyone except KO customers</div></div>
+  <div class="tl-step"><div class="tl-dot warn"></div><div class="tl-date">Tue 28 Jul, PM</div><div class="tl-label">Afternoon data confirms Docs fix, reveals separate Charge Work locking issue</div></div>
+  <div class="tl-step"><div class="tl-dot good"></div><div class="tl-date">Wed 29 Jul</div><div class="tl-label">R7 (PROD-01 + WEB-01) hardware upgrade</div></div>
+  <div class="tl-step"><div class="tl-dot good"></div><div class="tl-date">Thu 30 Jul</div><div class="tl-label">R10 (PROD-02 + WEB-02) hardware upgrade</div></div>
+  <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">Now</div><div class="tl-label">Awaiting Digital Fusion fix for both the filter and the locking issue</div></div>
+</div>
+
+<h2>The two problem screens, where they stand today</h2>
+<div class="status-group">
+
+  <div class="issue-card">
+    <div class="top">
+      <h3>Docs tab</h3>
+      <span class="pill warn">KO customers still slow — as expected</span>
+    </div>
+    <p>Caused by the new filter running far more lookups than it needs to. Switching the filter off for everyone except KO customers fixed this tab immediately for all trade and staff users.</p>
+    <div class="mini-stats">
+      <div class="mini-stat"><b class="hint" data-tip="Median find time, afternoon of 28 Jul:&#10;R7 — KO 306.7ms vs desktop 170.4ms&#10;R10 — KO 285.9ms vs desktop 153.7ms&#10;(Query Find calls on the Docs table)">~2x</b><span>slower for KO than everyone else, afternoon of 28 Jul</span></div>
+      <div class="mini-stat"><b class="hint" data-tip="Non-KO WebDirect median find time,&#10;afternoon of 28 Jul:&#10;R7 — 46.9ms&#10;R10 — 44.5ms&#10;Back to normal, pre-incident speed">0</b><span>impact on non-KO users — fully resolved for them</span></div>
+    </div>
+    <p>KO customers still have the filter switched on, so this is exactly what we'd expect — not a new problem. Fixed once the filter logic itself is corrected and safely re-enabled.</p>
+  </div>
+
+  <div class="issue-card">
+    <div class="top">
+      <h3>Charge Work tab</h3>
+      <span class="pill bad">Partially improved — new issue found</span>
+    </div>
+    <p>The filter-removal workaround cut overall load 4–7x. But afternoon logs on the 28th show several trade accounts periodically colliding with each other on the same records, causing sudden multi-second (occasionally 20–30 second) freezes — unrelated to KO or the filter.</p>
+    <div class="mini-stats">
+      <div class="mini-stat"><b class="hint" data-tip="R10, 11:01–11:04am, 28 Jul —&#10;MTHBUILD, EMCTWO, RRP,&#10;MILLERS, NELSONGARAGE,&#10;nobleservices, JOSHSPARKY&#10;all colliding on the same records">7</b><span>trade accounts caught in one contention cluster, one server, one morning</span></div>
+      <div class="mini-stat"><b class="hint" data-tip="EMCTWO: 11.1s, 12.5s, 28.4s&#10;(one tagged Lock Conflict)&#10;MTHBUILD: 9.4s, then 25.3s&#10;on Commit — same 3-min window">up to 30s</b><span>single freeze during a collision</span></div>
+    </div>
+    <p>This explains why field reports of "back to normal" and ongoing complaints can both be true — it's fine most of the time, with sharp, unpredictable freezes when two people hit the same record. Needs its own fix from Digital Fusion, most likely around how tightly Charge Work locks records during editing.</p>
+  </div>
+
+</div>
+
+<h2>Load &amp; latency over time</h2>
+<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Real per-day figures from the server logs, 22–28 Jul. The left chart is a <b>sum across every find that day</b> (thousands of them), not one continuous stall — hover for the exact find count. The right chart is the median time per individual find. The dip on 25–26 Jul is the weekend, not a fix — the real drop is 27→28 Jul, when the filter workaround went in.</p>
+<div class="chart-row">
+  <div class="chart-panel"><canvas id="loadChart"></canvas></div>
+  <div class="chart-panel"><canvas id="latencyChart"></canvas></div>
+</div>
+
+<h2>Also found</h2>
 <div class="cards">
-
   <div class="card">
-    <div class="dot bad"></div>
-    <div class="card-body">
-      <div class="card-title">Two tables are overloaded <span class="status bad">Main cause</span></div>
-      <p>Tables 129 and 147 went from a trickle of lookups to a flood right after the 19th — on both servers, independently. Table 129 is driven by the mobile app; table 147 is driven by desktop users, which means something in the release affected people who aren't even using the new mobile feature.</p>
+    <div class="dot warn"></div>
+    <div>
+      <div class="card-title">Nightly cleanup job has <span class="hint" data-tip="Table 153, likely alerts/notifications.&#10;Up to ~190 seconds per individual find,&#10;several times a night, both servers.&#10;Previously took seconds, not minutes.">slowed down significantly</span></div>
+      <p>A routine overnight "Purge Old Alerts" job now takes several minutes instead of seconds, every night, on both servers. Separate issue, needs its own fix — not urgent, but worth Digital Fusion's attention.</p>
     </div>
   </div>
-
   <div class="card">
-    <div class="dot good"></div>
-    <div class="card-body">
-      <div class="card-title">Temporary fix confirmed working <span class="status good">Mitigation applied</span></div>
-      <p>Filters were switched off for all mobile portals except one customer group on 28 Jul. On both servers, the mobile-driven table's load dropped 4–5x within a day, and lock-ups/queueing dropped along with it — strong confirmation the filter logic really was the problem. This is a stopgap, not a permanent fix: the filter still needs to be made efficient so it can be safely turned back on for everyone.</p>
+    <div class="dot warn"></div>
+    <div>
+      <div class="card-title">New lead: a <span class="hint" data-tip="R7 SOG-PROD-01, % Disk Time (D:):&#10;21–22 Jul capture — mean 43%, max 692%&#10;23–24 Jul capture — mean 3%, max 594%&#10;~14x higher mean, closer to release date">disk-activity spike</span> right after release, not yet explained</div>
+      <p>A separate performance capture taken closer to the 19 Jul release shows disk activity on R7's database server much higher than in the capture taken a couple of days later. CPU and RAM look consistent between the two, so this looks disk-specific — worth investigating rather than assuming the upcoming hardware upgrade will cover it, since more CPU/RAM doesn't fix a disk issue.</p>
     </div>
   </div>
-
   <div class="card">
-    <div class="dot bad"></div>
-    <div class="card-body">
-      <div class="card-title">Nightly cleanup job got much slower <span class="status warn">New finding</span></div>
-      <p>A routine overnight job ("Purge Old Alerts") now takes several minutes instead of seconds, every night, on both servers. Separate issue from the main one — worth its own fix.</p>
+    <div class="dot warn"></div>
+    <div>
+      <div class="card-title">Brief server-wide pause, <span class="hint" data-tip="Observed: R7, 15:10:38pm — tables&#10;129, 140, 147, 153, 161, 175, 227&#10;all froze ~7.7–8.0s simultaneously,&#10;then resumed together">ten minutes past every hour</span></div>
+      <p>A short pause affecting all screens at once has been identified around :10 past each hour, caused by a backup script that Digital Fusion runs — separate from CCL's regular overnight backup. It briefly touches every user, not just Charge Work or Docs, so it's going on Digital Fusion's list to explain and, if possible, streamline.</p>
     </div>
   </div>
-
-  <div class="card">
-    <div class="dot good"></div>
-    <div class="card-body">
-      <div class="card-title">Photo storage: not a bottleneck <span class="status good">Ruled out</span></div>
-      <p>Each new work order gets its own separate folder for photos/documents, so different trades uploading at the same time write to different folders and don't collide. Not a factor in the current slowdown.</p>
-      <p style="margin-top:8px;">Why Explorer feeling slow to browse doesn't mean FileMaker is slow: Explorer has to open and read every single folder just to display the list — with 3M+ files that's naturally sluggish. FileMaker never does that. When it needs a specific work order's documents, it already knows the exact folder name (the WO number) and goes straight to it in one step, the same way you'd go straight to a specific house on a street if you already had the address, instead of walking past every house first. The total number of files elsewhere in <code>DOCUMENTS</code> doesn't add any extra work to that lookup.</p>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="dot good"></div>
-    <div class="card-body">
-      <div class="card-title">Image compression: not the cause <span class="status good">Ruled out</span></div>
-      <p>Yes, mobile photos aren't compressed before upload — but the data shows upload traffic didn't actually go up after the release. Still worth compressing eventually, just not an emergency.</p>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="dot good"></div>
-    <div class="card-body">
-      <div class="card-title">Hardware: not the cause <span class="status good">Ruled out</span></div>
-      <p>The servers aren't struggling for resources on average. The two database servers occasionally max out all 4 CPU cores at once during bad moments — a small CPU bump would give breathing room, but won't fix the underlying issue. The web servers have plenty of spare capacity already.</p>
-    </div>
-  </div>
-
 </div>
 
-<h2>The hardware picture, visually</h2>
+<h2>Ruled out</h2>
+<div class="cards">
+  <div class="card">
+    <div class="dot good"></div>
+    <div>
+      <div class="card-title">Photo storage isn't a bottleneck</div>
+      <p>Each new work order gets its own folder, so <span class="hint" data-tip="~3,463 work-order folders sampled&#10;across both servers, avg 1–5 files&#10;each. New folder per WO, no shared&#10;'today' hot-spot as first suspected.">concurrent uploads from different trades don't collide</span> with each other on disk.</p>
+      <p style="margin-top:6px;">Worth noting: if you browse that folder in Windows Explorer it can feel slow to open — that's Explorer having to read every folder just to list them (there are millions of files total). It doesn't mean FileMaker is slow there: FileMaker already knows the exact folder name it needs (the WO number) and goes straight to it, the same way you'd drive straight to a known address instead of checking every house on the street. The two aren't connected.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="dot good"></div>
+    <div>
+      <div class="card-title">Uncompressed mobile photos aren't the cause</div>
+      <p><span class="hint" data-tip="Upload/thumbnail/download volume&#10;compared before vs after 19 Jul —&#10;no measurable increase found.&#10;Compression still worth doing&#10;eventually, just not urgent.">Upload traffic didn't actually increase</span> after the release. Still worth compressing eventually, just not the emergency.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="dot good"></div>
+    <div>
+      <div class="card-title">Hardware isn't the cause — upgrading anyway as a buffer</div>
+      <p>Servers aren't struggling on average, so hardware isn't why things slowed down. An upgrade is happening regardless: <span class="hint" data-tip="Was: 4 vCPU / 16GB RAM&#10;Becomes: 8 vCPU / 24GB RAM&#10;R7 (PROD-01 + WEB-01) on Wed 29 Jul,&#10;R10 (PROD-02 + WEB-02) on Thu 30 Jul">R7 (PROD-01 + WEB-01) on Wed 29 Jul, R10 (PROD-02 + WEB-02) on Thu 30 Jul</span>, taking the database servers to 8 cores/24GB and the web servers to 8 cores/16GB. This gives useful headroom but doesn't replace the filter and locking fixes still needed from Digital Fusion.</p>
+    </div>
+  </div>
+</div>
+
+<h2>CPU &amp; RAM — point-in-time snapshots</h2>
+<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Unlike the charts above, these aren't daily data — Perfmon only gave us aggregate mean/min/max across two separate capture windows, with no per-sample timestamps in between. So this shows "typical vs. worst moment," not a real trend line. Hover any bar for process-level detail.</p>
 <div class="chart-row">
   <div class="chart-panel"><canvas id="cpuChart"></canvas></div>
   <div class="chart-panel"><canvas id="memChart"></canvas></div>
 </div>
+<div class="chart-panel" style="margin-top:14px;">
+  <canvas id="captureCompareChart"></canvas>
+  <p style="color:var(--sub);font-size:12px;margin:10px 2px 0;">R7's database server (SOG-PROD-01) was captured twice, two days apart. These are two separate snapshots, not connected by real data in between — shown side by side rather than as a line, so it isn't mistaken for a continuous trend. RAM was similar in both (7,336 MB free on average in the first capture, 8,418 MB in the second) — left off this chart since its scale would dwarf the percentage figures above.</p>
+</div>
 
-<h2>What to do next</h2>
+<h2>What happens next</h2>
 <ol class="actions">
-  <li><b>Keep the temporary filter-off workaround in place</b> for now — it's confirmed working and buying breathing room.</li>
-  <li><b>Send Digital Fusion the task list below</b> — this is the actual permanent fix, needed before filters can go back on for everyone.</li>
-  <li><b>Check the nightly "Purge Old Alerts" job</b> — same kind of question: is it scanning an unindexed field on a table that's grown a lot recently?</li>
-  <li><b>Hold off on buying more hardware</b> for now — fix the above first, then re-check. A modest CPU increase on the database servers is reasonable as a buffer, not an emergency.</li>
-</ol>
-
-<h2>Tasks for Digital Fusion</h2>
-<ol class="actions">
-  <li><b>Check for an unindexed/unstored calculation</b> in the filter's criteria field(s) — the most likely explanation for both the volume and per-query slowness we measured.</li>
-  <li><b>Confirm how the filter is built</b> — a real indexed Find, or filtering an already-loaded portal row-by-row in memory? The second scales badly as the table grows.</li>
-  <li><b>Confirm when it re-runs</b> — once per user action, or repeatedly (every keystroke, every layout load)? Firing too often would explain a lot of the extra volume by itself.</li>
-  <li><b>Explain the desktop-side increase specifically</b> — table 147's jump is driven by desktop users, not mobile, so something shared (a script, layout, or relationship) needs identifying. The current filter-off mitigation does <b>not</b> fix this part.</li>
-  <li><b>Load-test the fix at production scale</b> before we turn filters back on for everyone — needs to hold up at real table sizes and current WebDirect concurrency, not just in a dev environment.</li>
+  <li><b>Keep the temporary filter-off workaround in place</b> for non-KO users.
+    <span class="why">Confirmed working, buying breathing room while the real fix is built.</span></li>
+  <li><b>Digital Fusion fixes the filter itself</b> for both Docs and Charge Work, so it can go back on safely for KO customers too.
+    <span class="why">This is the permanent fix for the Docs slowdown and half of the Charge Work slowdown.</span></li>
+  <li><b>Digital Fusion investigates the Charge Work record-locking issue</b> uncovered on the 28th.
+    <span class="why">Separate from the filter — this is what's causing the sharp, unpredictable freezes between trade accounts.</span></li>
+  <li><b>Ask Digital Fusion about their hourly backup script</b> — what it does and whether its timing or duration can be tuned.
+    <span class="why">It's their script, not CCL infrastructure — brief, but affects every user on the system, every hour.</span></li>
+  <li><b>Check the nightly "Purge Old Alerts" job</b> for the same kind of inefficiency as the other two.</li>
+  <li><b>Hardware upgrade is confirmed and scheduled</b> — R7 on 29 Jul, R10 on 30 Jul.
+    <span class="why">Good buffer for headroom, but not a substitute for the software fixes above — worth a fresh log check a few days after to confirm the real issues (filter, locking) actually improved, not just got less visible.</span></li>
 </ol>
 
 </main>
 
 <footer>
-  Sources: FileMaker Server query/lock logs (R7 &amp; R10, 16–24 Jul 2026), Windows Performance Monitor captures (23–24 Jul 2026), and a full folder-structure scan of the container storage on both servers. A more detailed technical writeup with all supporting figures is available on request.
+  Sources: FileMaker Server query/lock logs (R7 &amp; R10, 16–28 Jul 2026, including afternoon coverage on 28 Jul), Windows Performance Monitor captures (23–24 Jul 2026), and a full folder-structure scan of container storage on both servers. A detailed technical writeup with full supporting data is available on request.
 </footer>
 
 <script>
 const textColor = '#8fa3b3';
 const gridColor = 'rgba(255,255,255,0.06)';
+
+// --- Load & latency over time (real per-day log data, 22-28 Jul) ---
+const dates = ['22 Jul','23 Jul','24 Jul','25 Jul','26 Jul','27 Jul','28 Jul'];
+
+// [total seconds, {129: seconds, 147: seconds}]
+const r7Load  = [null, 7653, 16463, 703, 1691, 21092, 6642];
+const r10Load = [1394, 20404, 18269, 1230, 2160, 30330, 7751];
+const loadBreakdown7  = [null, [5943,1710],[13039,3424],[678,24],[1656,35],[16963,4129],[4410,2231]];
+const loadBreakdown10 = [[1287,107],[18444,1960],[15244,3025],[1215,14],[2114,46],[26232,4098],[6206,1545]];
+
+const r7Lat  = [null, 254.0, 345.1, 179.1, 180.4, 442.8, 308.6];
+const r10Lat = [150.0, 376.4, 430.2, 296.8, 306.8, 671.5, 292.9];
+const latBreakdown7  = [null, [442.0,174.3],[530.9,239.1],[182.0,33.2],[188.6,31.8],[545.1,339.3],[1047.5,183.6]];
+const latBreakdown10 = [[308.5,133.7],[944.1,154.8],[763.6,256.2],[400.6,25.4],[411.5,25.7],[1142.4,342.5],[1714.4,168.4]];
+
+const findCounts7  = [null, 11173, 17609, 1381, 3039, 22069, 11269];
+const findCounts10 = [2037, 16471, 15735, 1376, 2185, 18163, 8074];
+
+function breakdownLines(bd) {
+  if (!bd) return [];
+  return [`Charge Work (129): ${bd[0].toLocaleString()}`, `Docs (147): ${bd[1].toLocaleString()}`];
+}
+
+new Chart(document.getElementById('loadChart'), {
+  type:'line',
+  data:{labels:dates, datasets:[
+    {label:'R7', data:r7Load, borderColor:'#4fb0ff', backgroundColor:'#4fb0ff', pointRadius:4, pointHoverRadius:6, borderWidth:2, tension:0.15, spanGaps:true},
+    {label:'R10', data:r10Load, borderColor:'#eb6834', backgroundColor:'#eb6834', pointRadius:4, pointHoverRadius:6, borderWidth:2, borderDash:[6,3], tension:0.15}
+  ]},
+  options:{responsive:true, plugins:{
+    title:{display:true,text:'Cumulative server-seconds / day (sum across all finds — not one continuous stall)',color:'#e7edf2', font:{size:13}},
+    legend:{labels:{color:textColor}},
+    tooltip:{callbacks:{
+      afterLabel:(ctx)=>{
+        const bd = ctx.datasetIndex===0 ? loadBreakdown7[ctx.dataIndex] : loadBreakdown10[ctx.dataIndex];
+        return breakdownLines(bd).map(l=>l+'s');
+      },
+      footer:(items)=>{
+        const ctx = items[0];
+        const n = ctx.datasetIndex===0 ? findCounts7[ctx.dataIndex] : findCounts10[ctx.dataIndex];
+        return n ? `Sum across ${n.toLocaleString()} finds that day` : '';
+      }
+    }}
+  },
+    scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor,callback:v=>v.toLocaleString()+'s'},grid:{color:gridColor}}}}
+});
+
+new Chart(document.getElementById('latencyChart'), {
+  type:'line',
+  data:{labels:dates, datasets:[
+    {label:'R7', data:r7Lat, borderColor:'#4fb0ff', backgroundColor:'#4fb0ff', pointRadius:4, pointHoverRadius:6, borderWidth:2, tension:0.15, spanGaps:true},
+    {label:'R10', data:r10Lat, borderColor:'#eb6834', backgroundColor:'#eb6834', pointRadius:4, pointHoverRadius:6, borderWidth:2, borderDash:[6,3], tension:0.15}
+  ]},
+  options:{responsive:true, plugins:{
+    title:{display:true,text:'Median find latency / day (ms)',color:'#e7edf2'},
+    legend:{labels:{color:textColor}},
+    tooltip:{callbacks:{afterLabel:(ctx)=>{
+      const bd = ctx.datasetIndex===0 ? latBreakdown7[ctx.dataIndex] : latBreakdown10[ctx.dataIndex];
+      return breakdownLines(bd).map(l=>l+'ms');
+    }}}
+  },
+    scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor,callback:v=>v+'ms'},grid:{color:gridColor}}}}
+});
+
+// --- CPU / RAM: point-in-time snapshots, not continuous data ---
+const cpuExtra = [
+  ['fmserver process peaked at 267% of one core', 'Upgrading 4→8 vCPU on 29 Jul'],
+  ['fmserver process peaked at 278% of one core', 'Upgrading 4→8 vCPU on 30 Jul'],
+  ['WPE (java.exe) peaked at 17% · fmscwpc at 35%', 'Not CPU-bound — upgrade is precautionary'],
+  ['WPE (java.exe) peaked at 16% · fmscwpc at 52%', 'Not CPU-bound — upgrade is precautionary'],
+];
 
 new Chart(document.getElementById('cpuChart'), {
   type:'bar',
@@ -161,9 +325,20 @@ new Chart(document.getElementById('cpuChart'), {
     {label:'Typical CPU use %', data:[10,9,2,2], backgroundColor:'#4fb0ff'},
     {label:'Worst moment %', data:[100,100,25,33], backgroundColor:'#f5a623'}
   ]},
-  options:{responsive:true, plugins:{title:{display:true,text:'CPU usage: typical vs. worst moment',color:'#e7edf2'}, legend:{labels:{color:textColor}}},
+  options:{responsive:true, plugins:{
+    title:{display:true,text:'CPU usage: typical vs. worst moment',color:'#e7edf2'},
+    legend:{labels:{color:textColor}},
+    tooltip:{callbacks:{afterLabel: (ctx) => cpuExtra[ctx.dataIndex]}}
+  },
     scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor},grid:{color:gridColor}, max:110}}}
 });
+
+const memExtra = [
+  ['% Committed: mean 58%, max 71%', '16GB installed → upgrading to 24GB'],
+  ['% Committed: mean 52%, max 69%', '16GB installed → upgrading to 24GB'],
+  ['8GB installed → upgrading to 16GB', 'java.exe (WPE) working set up to ~2.5GB'],
+  ['8GB installed → upgrading to 16GB', 'WebDirect concurrency trending upward'],
+];
 
 new Chart(document.getElementById('memChart'), {
   type:'bar',
@@ -171,7 +346,28 @@ new Chart(document.getElementById('memChart'), {
     {label:'Free RAM, typical (MB)', data:[7336,8142,3120,3086], backgroundColor:'#3ecf8e'},
     {label:'Free RAM, worst moment (MB)', data:[4421,4546,1892,1758], backgroundColor:'#f0563d'}
   ]},
-  options:{responsive:true, plugins:{title:{display:true,text:'Free RAM: typical vs. worst moment',color:'#e7edf2'}, legend:{labels:{color:textColor}}},
+  options:{responsive:true, plugins:{
+    title:{display:true,text:'Free RAM: typical vs. worst moment',color:'#e7edf2'},
+    legend:{labels:{color:textColor}},
+    tooltip:{callbacks:{afterLabel: (ctx) => memExtra[ctx.dataIndex]}}
+  },
+    scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor},grid:{color:gridColor}}}}
+});
+
+new Chart(document.getElementById('captureCompareChart'), {
+  type:'bar',
+  data:{labels:['Total CPU mean %','fmserver CPU max %','Disk Time (D:) mean %'], datasets:[
+    {label:'23–24 Jul capture', data:[10,267,3], backgroundColor:'#4fb0ff'},
+    {label:'21–22 Jul capture (closer to release)', data:[18,289,43], backgroundColor:'#f5a623'}
+  ]},
+  options:{responsive:true, indexAxis:'y', plugins:{
+    title:{display:true,text:'R7 database server (SOG-PROD-01): two separate captures',color:'#e7edf2'},
+    legend:{labels:{color:textColor}},
+    tooltip:{callbacks:{afterLabel:(ctx)=>{
+      if (ctx.label === 'Disk Time (D:) mean %') return ['⚠ ~14x difference — unresolved lead, see "Also found"'];
+      return [];
+    }}}
+  },
     scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor},grid:{color:gridColor}}}}
 });
 </script>
