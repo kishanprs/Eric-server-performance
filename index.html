@@ -60,6 +60,7 @@
 <div class="tldr">
   <ul>
     <li><b>Main cause:</b> since the release, two tables (129 and 147) are getting hit with 17–80x more database lookups than before, and each lookup is 6–11x slower. This is the real reason things feel slow — for everyone, not just mobile users.</li>
+    <li><b>Update — temporary fix is working:</b> filters were turned off for all mobile users (except one customer group) on 28 Jul. The overload on the mobile-driven table dropped 4–5x overnight, confirming that's really the problem. This buys time but isn't the permanent fix.</li>
     <li><b>Not the cause:</b> image uploads from the mobile app aren't compressed, but that's not what's making things slow right now — data confirms upload traffic didn't actually increase.</li>
     <li><b>Not a factor:</b> each new work order gets its own separate photo/document folder, so concurrent mobile uploads don't collide with each other.</li>
     <li><b>Also found:</b> a nightly cleanup job is now taking much longer than it used to, on both servers.</li>
@@ -75,6 +76,14 @@
     <div class="card-body">
       <div class="card-title">Two tables are overloaded <span class="status bad">Main cause</span></div>
       <p>Tables 129 and 147 went from a trickle of lookups to a flood right after the 19th — on both servers, independently. Table 129 is driven by the mobile app; table 147 is driven by desktop users, which means something in the release affected people who aren't even using the new mobile feature.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="dot good"></div>
+    <div class="card-body">
+      <div class="card-title">Temporary fix confirmed working <span class="status good">Mitigation applied</span></div>
+      <p>Filters were switched off for all mobile portals except one customer group on 28 Jul. On both servers, the mobile-driven table's load dropped 4–5x within a day, and lock-ups/queueing dropped along with it — strong confirmation the filter logic really was the problem. This is a stopgap, not a permanent fix: the filter still needs to be made efficient so it can be safely turned back on for everyone.</p>
     </div>
   </div>
 
@@ -121,9 +130,19 @@
 
 <h2>What to do next</h2>
 <ol class="actions">
-  <li><b>Get Digital Fusion to look at tables 129 and 147</b> — specifically whether the new filter uses an unindexed/unstored field, and whether it's running far more lookups than it needs to. This is the actual fix.</li>
+  <li><b>Keep the temporary filter-off workaround in place</b> for now — it's confirmed working and buying breathing room.</li>
+  <li><b>Send Digital Fusion the task list below</b> — this is the actual permanent fix, needed before filters can go back on for everyone.</li>
   <li><b>Check the nightly "Purge Old Alerts" job</b> — same kind of question: is it scanning an unindexed field on a table that's grown a lot recently?</li>
   <li><b>Hold off on buying more hardware</b> for now — fix the above first, then re-check. A modest CPU increase on the database servers is reasonable as a buffer, not an emergency.</li>
+</ol>
+
+<h2>Tasks for Digital Fusion</h2>
+<ol class="actions">
+  <li><b>Check for an unindexed/unstored calculation</b> in the filter's criteria field(s) — the most likely explanation for both the volume and per-query slowness we measured.</li>
+  <li><b>Confirm how the filter is built</b> — a real indexed Find, or filtering an already-loaded portal row-by-row in memory? The second scales badly as the table grows.</li>
+  <li><b>Confirm when it re-runs</b> — once per user action, or repeatedly (every keystroke, every layout load)? Firing too often would explain a lot of the extra volume by itself.</li>
+  <li><b>Explain the desktop-side increase specifically</b> — table 147's jump is driven by desktop users, not mobile, so something shared (a script, layout, or relationship) needs identifying. The current filter-off mitigation does <b>not</b> fix this part.</li>
+  <li><b>Load-test the fix at production scale</b> before we turn filters back on for everyone — needs to hold up at real table sizes and current WebDirect concurrency, not just in a dev environment.</li>
 </ol>
 
 </main>
