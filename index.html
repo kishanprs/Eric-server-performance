@@ -150,12 +150,13 @@
       <div class="mini-stat"><b class="hint" data-tip="EMCTWO: 11.1s, 12.5s, 28.4s&#10;(one tagged Lock Conflict)&#10;MTHBUILD: 9.4s, then 25.3s&#10;on Commit — same 3-min window">up to 30s</b><span>single freeze during a collision</span></div>
     </div>
     <p>This explains why field reports of "back to normal" and ongoing complaints can both be true — it's fine most of the time, with sharp, unpredictable freezes when two people hit the same record. Needs its own fix from Digital Fusion, most likely around how tightly Charge Work locks records during editing.</p>
+    <p><span class="hint" data-tip="Median find time, table 129, full day 28 Jul:&#10;R7 midday — 2,250ms (non-KO) / 1,057ms (KO)&#10;R7 evening — 3.4ms (non-KO) / 518ms (KO)&#10;R10 midday — 3,288ms (non-KO) / 2,201ms (KO)&#10;R10 evening — 5.2ms, no KO activity&#10;Confirms: it's specifically a business-hours, concurrent-editing problem">Confirmed with a full 24-hour read of the 28th</span>: the freezing is a business-hours phenomenon. By evening, once fewer trades are working concurrently, Charge Work drops to single-digit milliseconds for everyone — which is exactly why some field reports say "fine" while the daytime data still shows real problems.</p>
   </div>
 
 </div>
 
 <h2>Load &amp; latency over time</h2>
-<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Real per-day figures from the server logs, 22–28 Jul. The left chart is a <b>sum across every find that day</b> (thousands of them), not one continuous stall — hover for the exact find count. The right chart is the median time per individual find. The dip on 25–26 Jul is the weekend, not a fix — the real drop is 27→28 Jul, when the filter workaround went in.</p>
+<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Real per-day figures from the server logs, 22–29 Jul (28 Jul is now a complete 24-hour day; <b>29 Jul* is partial</b> — logs run to ~9am only, the morning of R7's hardware upgrade). The left chart is a <b>sum across every find that day</b> (thousands of them), not one continuous stall — hover for the exact find count. The right chart is the median time per individual find. The dip on 25–26 Jul is the weekend, not a fix — the real drop is 27→28 Jul, when the filter workaround went in.</p>
 <div class="chart-row">
   <div class="chart-panel"><canvas id="loadChart"></canvas></div>
   <div class="chart-panel"><canvas id="latencyChart"></canvas></div>
@@ -180,8 +181,8 @@
   <div class="card">
     <div class="dot warn"></div>
     <div>
-      <div class="card-title">Brief server-wide pause, <span class="hint" data-tip="Observed: R7, 15:10:38pm — tables&#10;129, 140, 147, 153, 161, 175, 227&#10;all froze ~7.7–8.0s simultaneously,&#10;then resumed together">ten minutes past every hour</span></div>
-      <p>A short pause affecting all screens at once has been identified around :10 past each hour, caused by a backup script that Digital Fusion runs — separate from CCL's regular overnight backup. It briefly touches every user, not just Charge Work or Docs, so it's going on Digital Fusion's list to explain and, if possible, streamline.</p>
+      <div class="card-title">Brief server-wide pause, <span class="hint" data-tip="Now seen 3 times in one day on each server:&#10;R7 — 09:10, 11:10, 15:10&#10;R10 — 09:10, 13:10, 15:10&#10;All at :10 past the hour, all hitting&#10;4+ unrelated tables simultaneously">ten minutes past every hour</span></div>
+      <p>A short pause affecting all screens at once has been identified around :10 past each hour, caused by a backup script that Digital Fusion runs — separate from CCL's regular overnight backup. A full-day read now shows this pattern 3 separate times on each server, reinforcing it's real and periodic rather than a one-off. It briefly touches every user, not just Charge Work or Docs, so it's going on Digital Fusion's list to explain and, if possible, streamline.</p>
     </div>
   </div>
 </div>
@@ -249,21 +250,21 @@ const textColor = '#8fa3b3';
 const gridColor = 'rgba(255,255,255,0.06)';
 
 // --- Load & latency over time (real per-day log data, 22-28 Jul) ---
-const dates = ['22 Jul','23 Jul','24 Jul','25 Jul','26 Jul','27 Jul','28 Jul'];
+const dates = ['22 Jul','23 Jul','24 Jul','25 Jul','26 Jul','27 Jul','28 Jul','29 Jul*'];
 
 // [total seconds, {129: seconds, 147: seconds}]
-const r7Load  = [null, 7653, 16463, 703, 1691, 21092, 6642];
-const r10Load = [1394, 20404, 18269, 1230, 2160, 30330, 7751];
-const loadBreakdown7  = [null, [5943,1710],[13039,3424],[678,24],[1656,35],[16963,4129],[4410,2231]];
-const loadBreakdown10 = [[1287,107],[18444,1960],[15244,3025],[1215,14],[2114,46],[26232,4098],[6206,1545]];
+const r7Load  = [null, 7653, 16463, 703, 1691, 21092, 6790, 490];
+const r10Load = [1394, 20404, 18269, 1230, 2160, 30330, 7882, 513];
+const loadBreakdown7  = [null, [5943,1710],[13039,3424],[678,24],[1656,35],[16963,4129],[4543,2247],[275,215]];
+const loadBreakdown10 = [[1287,107],[18444,1960],[15244,3025],[1215,14],[2114,46],[26232,4098],[6325,1556],[312,201]];
 
-const r7Lat  = [null, 254.0, 345.1, 179.1, 180.4, 442.8, 308.6];
-const r10Lat = [150.0, 376.4, 430.2, 296.8, 306.8, 671.5, 292.9];
-const latBreakdown7  = [null, [442.0,174.3],[530.9,239.1],[182.0,33.2],[188.6,31.8],[545.1,339.3],[1047.5,183.6]];
-const latBreakdown10 = [[308.5,133.7],[944.1,154.8],[763.6,256.2],[400.6,25.4],[411.5,25.7],[1142.4,342.5],[1714.4,168.4]];
+const r7Lat  = [null, 254.0, 345.1, 179.1, 180.4, 442.8, 295.9, 177.0];
+const r10Lat = [150.0, 376.4, 430.2, 296.8, 306.8, 671.5, 259.6, 184.4];
+const latBreakdown7  = [null, [442.0,174.3],[530.9,239.1],[182.0,33.2],[188.6,31.8],[545.1,339.3],[963.3,182.4],[533.4,171.7]];
+const latBreakdown10 = [[308.5,133.7],[944.1,154.8],[763.6,256.2],[400.6,25.4],[411.5,25.7],[1142.4,342.5],[1250.5,167.0],[221.8,156.1]];
 
-const findCounts7  = [null, 11173, 17609, 1381, 3039, 22069, 11269];
-const findCounts10 = [2037, 16471, 15735, 1376, 2185, 18163, 8074];
+const findCounts7  = [null, 11173, 17609, 1381, 3039, 22069, 11774, 1181];
+const findCounts10 = [2037, 16471, 15735, 1376, 2185, 18163, 8710, 1085];
 
 function breakdownLines(bd) {
   if (!bd) return [];
@@ -287,7 +288,10 @@ new Chart(document.getElementById('loadChart'), {
       footer:(items)=>{
         const ctx = items[0];
         const n = ctx.datasetIndex===0 ? findCounts7[ctx.dataIndex] : findCounts10[ctx.dataIndex];
-        return n ? `Sum across ${n.toLocaleString()} finds that day` : '';
+        const lines = [];
+        if (n) lines.push(`Sum across ${n.toLocaleString()} finds that day`);
+        if (ctx.dataIndex === 7) lines.push('Partial day — logs run to ~9am only, before the R7 upgrade');
+        return lines;
       }
     }}
   },
