@@ -68,6 +68,9 @@
   ol.actions li{margin-bottom:14px;font-size:14px;padding-left:2px;}
   ol.actions b{color:var(--accent);}
   ol.actions .why{display:block;color:var(--sub);font-size:12.5px;margin-top:2px;}
+  ul.checklist{margin:8px 0 0;padding-left:18px;}
+  ul.checklist li{font-size:13px;color:#c7d2da;margin-bottom:6px;font-weight:400;}
+  ul.checklist li b{color:var(--text);font-weight:600;}
 
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);}
@@ -100,7 +103,7 @@
   <div class="eyebrow">Incident summary · plain-language version</div>
   <h1>Eric System — Slowdown Investigation</h1>
   <p>What happened, what we've confirmed, and what's still being fixed — for Switched On stakeholders</p>
-  <div class="updated">Updated through 28 Jul, end of day <span style="opacity:.7;">— dotted numbers show more detail on hover</span></div>
+  <div class="updated">Updated through 29 Jul (partial) <span style="opacity:.7;">— dotted numbers show more detail on hover</span></div>
 </header>
 
 <main>
@@ -110,7 +113,7 @@
   <p>The slowdown was caused by a filter introduced in the <b>19 Jul enhancement</b> that made two screens — <b>Charge Work</b> and <b>Docs</b> — run far more database lookups than before, each one slower too. That's confirmed and reproduced independently on both regional servers.</p>
   <p>On <b>28 Jul</b> we switched the filter off for everyone except Switched On (KO) customer logins, as a temporary measure. That fixed the Docs tab for everyone except KO customers, who still have the filter on and are still visibly slower there — expected, and will be resolved once the filter itself is fixed.</p>
   <p>The Charge Work tab is more complicated: the workaround cut the overload, but afternoon data on the 28th uncovered a <b>second, separate problem</b> — several trade accounts colliding with each other on the same records, causing sharp multi-second freezes independent of KO or the filter. That still needs a fix from Digital Fusion.</p>
-  <p>Hardware, image upload size, and folder structure have all been ruled out as causes. A hardware upgrade is happening anyway on 29–30 Jul as a sensible buffer, but it's not a substitute for the software fixes above.</p>
+  <p>Hardware, image upload size, and folder structure have all been ruled out as causes. The hardware upgrade completed 29 Jul (DB servers now 16 cores/32GB, web servers 8 cores/16GB), and it proves the point: KO customers — who still have the filter on — got barely any faster despite 4x the CPU and 2x the RAM. That confirms this was never a hardware problem, and turning the filter back on for everyone would very likely still be slow.</p>
 </div>
 
 <div class="timeline">
@@ -118,8 +121,8 @@
   <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">16–24 Jul</div><div class="tl-label">Investigation: root cause traced to filter logic on Charge Work &amp; Docs</div></div>
   <div class="tl-step"><div class="tl-dot good"></div><div class="tl-date">Tue 28 Jul, AM</div><div class="tl-label">Filter switched off for everyone except KO customers</div></div>
   <div class="tl-step"><div class="tl-dot warn"></div><div class="tl-date">Tue 28 Jul, PM</div><div class="tl-label">Afternoon data confirms Docs fix, reveals separate Charge Work locking issue</div></div>
-  <div class="tl-step"><div class="tl-dot good"></div><div class="tl-date">Wed 29 Jul</div><div class="tl-label">R7 (PROD-01 + WEB-01) hardware upgrade</div></div>
-  <div class="tl-step"><div class="tl-dot good"></div><div class="tl-date">Thu 30 Jul</div><div class="tl-label">R10 (PROD-02 + WEB-02) hardware upgrade</div></div>
+  <div class="tl-step"><div class="tl-dot good"></div><div class="tl-date">Wed 29 Jul, evening</div><div class="tl-label">Hardware upgrade completed — DB servers to 16-core/32GB, web to 8-core/16GB</div></div>
+  <div class="tl-step"><div class="tl-dot warn"></div><div class="tl-date">30 Jul</div><div class="tl-label">Post-upgrade check: headroom way up, but KO barely faster — confirms it's not a hardware problem</div></div>
   <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">Now</div><div class="tl-label">Awaiting Digital Fusion fix for both the filter and the locking issue</div></div>
 </div>
 
@@ -155,8 +158,13 @@
 
 </div>
 
+<div class="bottomline" style="border-left:4px solid var(--bad);margin-top:8px;">
+  <p style="font-size:15px;"><b>Would turning the filter back on for everyone still be slow?</b> Yes, most likely — and now we have direct evidence, not just a guess.</p>
+  <p>KO customers still have the original filter switched on, so comparing their speed <b>before vs. after</b> the hardware upgrade isolates the hardware effect specifically — same query logic, dramatically more CPU and RAM. If they'd sped up close to as much as the CPU/RAM did (4x and 2x), that would point at hardware as the real constraint. Instead <span class="hint" data-tip="Charge Work median: R7 1,097.5ms→999.2ms (-9%),&#10;R10 2,109.9ms→1,651.8ms (-22%)&#10;Docs median: R7 383.8ms→310.0ms (-19%),&#10;R10 319.6ms→325.1ms (~0%)">KO improved only 0–22%</span> and remains 3–8x slower than desktop users doing the same thing. That means the cost is baked into the query itself, not how much compute is behind it — so re-enabling the filter for everyone would spread that same expensive query across a much bigger group of users, not fix it. Recommend holding off until Digital Fusion's fix to the filter logic actually lands.</p>
+</div>
+
 <h2>Load &amp; latency over time</h2>
-<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Real per-day figures from the server logs, 22–29 Jul (28 Jul is now a complete 24-hour day; <b>29 Jul* is partial</b> — logs run to ~9am only, the morning of R7's hardware upgrade). The left chart is a <b>sum across every find that day</b> (thousands of them), not one continuous stall — hover for the exact find count. The right chart is the median time per individual find. The dip on 25–26 Jul is the weekend, not a fix — the real drop is 27→28 Jul, when the filter workaround went in.</p>
+<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Real per-day figures from the server logs, 22–30 Jul. <b>29 Jul is split at the upgrade cutover (~5:55pm)</b> so the hardware change doesn't get blended into one misleading daily average; <b>30 Jul* is partial</b> — logs run to ~2pm only. The left chart is a <b>sum across every find</b> (thousands of them), not one continuous stall — hover for the exact find count. The right chart is the median time per individual find. Don't read "29 Jul PM" as proof the upgrade fixed everything — it's also just evening, when volume drops anyway (see the 25–26 Jul weekend dip, and the full day-shape breakdown earlier in this report). <b>30 Jul is the fairer test:</b> a full business day, fully after the upgrade — and it's still elevated versus the floor, consistent with the filter/locking issues being unresolved.</p>
 <div class="chart-row">
   <div class="chart-panel"><canvas id="loadChart"></canvas></div>
   <div class="chart-panel"><canvas id="latencyChart"></canvas></div>
@@ -174,8 +182,8 @@
   <div class="card">
     <div class="dot warn"></div>
     <div>
-      <div class="card-title">New lead: a <span class="hint" data-tip="R7 SOG-PROD-01, % Disk Time (D:):&#10;21–22 Jul capture — mean 43%, max 692%&#10;23–24 Jul capture — mean 3%, max 594%&#10;~14x higher mean, closer to release date">disk-activity spike</span> right after release, not yet explained</div>
-      <p>A separate performance capture taken closer to the 19 Jul release shows disk activity on R7's database server much higher than in the capture taken a couple of days later. CPU and RAM look consistent between the two, so this looks disk-specific — worth investigating rather than assuming the upcoming hardware upgrade will cover it, since more CPU/RAM doesn't fix a disk issue.</p>
+      <div class="card-title">Disk-activity lead: <span class="hint" data-tip="R7 SOG-PROD-01, % Disk Time (D:):&#10;21–22 Jul capture — mean 43%, max 692%&#10;23–24 Jul capture — mean 3%, max 594%&#10;After upgrade (29-30 Jul) — mean 3%, max 713% (R7) / 403% (R10)&#10;Confirmed: hardware upgrade did not change this">confirmed unaffected by the hardware upgrade</span></div>
+      <p>A separate performance capture taken closer to the 19 Jul release showed disk activity on R7's database server much higher than a capture taken a couple of days later — CPU and RAM looked consistent between the two, so this looked disk-specific. Post-upgrade data now confirms it: disk activity stayed essentially the same before and after the hardware upgrade, exactly as expected since more CPU/RAM doesn't touch disk I/O. Still unexplained and still worth investigating — just now ruled out as something the hardware fix would ever have solved.</p>
     </div>
   </div>
   <div class="card">
@@ -207,21 +215,29 @@
   <div class="card">
     <div class="dot good"></div>
     <div>
-      <div class="card-title">Hardware isn't the cause — upgrading anyway as a buffer</div>
-      <p>Servers aren't struggling on average, so hardware isn't why things slowed down. An upgrade is happening regardless: <span class="hint" data-tip="Was: 4 vCPU / 16GB RAM&#10;Becomes: 8 vCPU / 24GB RAM&#10;R7 (PROD-01 + WEB-01) on Wed 29 Jul,&#10;R10 (PROD-02 + WEB-02) on Thu 30 Jul">R7 (PROD-01 + WEB-01) on Wed 29 Jul, R10 (PROD-02 + WEB-02) on Thu 30 Jul</span>, taking the database servers to 8 cores/24GB and the web servers to 8 cores/16GB. This gives useful headroom but doesn't replace the filter and locking fixes still needed from Digital Fusion.</p>
+      <div class="card-title">Hardware isn't the cause — the completed upgrade proves it</div>
+      <p>Servers aren't struggling on average, so hardware isn't why things slowed down. An upgrade completed anyway as a buffer: <span class="hint" data-tip="Was: 4 vCPU / 16GB RAM&#10;DB tier now: 16 vCPU / 32GB RAM&#10;Web tier: 8 vCPU / 16GB RAM&#10;Completed by Spark, 29 Jul evening">DB servers to 16 cores/32GB, web servers to 8 cores/16GB</span>. This turned into a useful test: KO customers still have the filter on, so comparing their speed before and after the upgrade isolates the hardware effect. <span class="hint" data-tip="Charge Work median: R7 1,097.5ms→999.2ms (-9%),&#10;R10 2,109.9ms→1,651.8ms (-22%)&#10;Docs median: R7 383.8ms→310.0ms (-19%),&#10;R10 319.6ms→325.1ms (~0%)&#10;Still 3-8x slower than desktop users">KO improved only 0–22%</span> despite 4x the CPU and 2x the RAM — confirming this is a query-logic problem, not a resource problem, and doesn't replace the filter and locking fixes still needed from Digital Fusion.</p>
     </div>
   </div>
 </div>
 
-<h2>CPU &amp; RAM — point-in-time snapshots</h2>
-<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Unlike the charts above, these aren't daily data — Perfmon only gave us aggregate mean/min/max across two separate capture windows, with no per-sample timestamps in between. So this shows "typical vs. worst moment," not a real trend line. Hover any bar for process-level detail.</p>
+<h2>CPU &amp; RAM — before vs. after the hardware upgrade</h2>
+<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Real before/after data — Perfmon captured all four servers again right after Spark completed the upgrade on 29 Jul. Hover any bar for the exact figures.</p>
+<div class="chart-row">
+  <div class="chart-panel"><canvas id="upgradeCpuChart"></canvas></div>
+  <div class="chart-panel"><canvas id="upgradeRamChart"></canvas></div>
+</div>
+<p style="color:var(--sub);font-size:12px;margin:10px 2px 0 2px;">Both database servers went from occasionally maxing out all cores to barely working, and from a few GB of free RAM to 20+ GB free at all times. Disk activity, not shown here, did <b>not</b> improve — see "Also found" above.</p>
+
+<h2 style="margin-top:36px;">CPU &amp; RAM — earlier point-in-time snapshots</h2>
+<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">These pre-upgrade figures aren't daily data — Perfmon only gave us aggregate mean/min/max across separate capture windows, with no per-sample timestamps in between. Kept here for reference against the before/after view above. Hover any bar for process-level detail.</p>
 <div class="chart-row">
   <div class="chart-panel"><canvas id="cpuChart"></canvas></div>
   <div class="chart-panel"><canvas id="memChart"></canvas></div>
 </div>
 <div class="chart-panel" style="margin-top:14px;">
   <canvas id="captureCompareChart"></canvas>
-  <p style="color:var(--sub);font-size:12px;margin:10px 2px 0;">R7's database server (SOG-PROD-01) was captured twice, two days apart. These are two separate snapshots, not connected by real data in between — shown side by side rather than as a line, so it isn't mistaken for a continuous trend. RAM was similar in both (7,336 MB free on average in the first capture, 8,418 MB in the second) — left off this chart since its scale would dwarf the percentage figures above.</p>
+  <p style="color:var(--sub);font-size:12px;margin:10px 2px 0;">R7's database server (SOG-PROD-01) was captured twice before the upgrade, two days apart. These are two separate snapshots, not connected by real data in between — shown side by side rather than as a line, so it isn't mistaken for a continuous trend. RAM was similar in both (7,336 MB free on average in the first capture, 8,418 MB in the second) — left off this chart since its scale would dwarf the percentage figures above.</p>
 </div>
 
 <h2>What happens next</h2>
@@ -229,42 +245,54 @@
   <li><b>Keep the temporary filter-off workaround in place</b> for non-KO users.
     <span class="why">Confirmed working, buying breathing room while the real fix is built.</span></li>
   <li><b>Digital Fusion fixes the filter itself</b> for both Docs and Charge Work, so it can go back on safely for KO customers too.
-    <span class="why">This is the permanent fix for the Docs slowdown and half of the Charge Work slowdown.</span></li>
+    <span class="why">This is the permanent fix for the Docs slowdown and half of the Charge Work slowdown.</span>
+    <ul class="checklist">
+      <li><b>Unindexed or unstored calculations</b> — is the filter's search criteria built on a calculation field that can't be indexed? This forces FileMaker to check every record instead of doing a fast lookup, and would explain both the volume and the per-call slowness we measured.</li>
+      <li><b>How the filter actually runs</b> — is it doing a real indexed Find, or filtering an already-loaded portal in memory? The two have very different cost profiles at scale, and the volume increase we measured (17–160x more finds) suggests something closer to a Find running far more often than intended.</li>
+      <li><b>How often it triggers</b> — does it run once per user action, or on every keystroke / every layout load? This alone could explain a large part of the volume increase without anything being "broken" in the traditional sense.</li>
+      <li><b>Why Docs (147) affects desktop users too</b> — the new filter targets mobile/WebDirect, but desktop Pro users saw a real increase in Docs load as well. Something shared (a relationship, script, or layout calculation) beyond the mobile filter itself needs explaining.</li>
+      <li><b>Load-test at production scale before re-enabling for everyone</b> — given KO's experience barely improved with 4x the hardware, don't take "it works for one customer group" as proof it'll work for the full user base. Confirm under realistic concurrent load first.</li>
+    </ul>
+  </li>
   <li><b>Digital Fusion investigates the Charge Work record-locking issue</b> uncovered on the 28th.
-    <span class="why">Separate from the filter — this is what's causing the sharp, unpredictable freezes between trade accounts.</span></li>
+    <span class="why">Separate from the filter — this is what's causing the sharp, unpredictable freezes between trade accounts.</span>
+    <ul class="checklist">
+      <li><b>Lock granularity</b> — does Charge Work lock at the whole work-order level, or per line item? If several trades editing the same job collide on a work-order-level lock, that would explain the multi-second-to-30-second freezes seen between unrelated trade accounts.</li>
+    </ul>
+  </li>
   <li><b>Ask Digital Fusion about their hourly backup script</b> — what it does and whether its timing or duration can be tuned.
     <span class="why">It's their script, not CCL infrastructure — brief, but affects every user on the system, every hour.</span></li>
   <li><b>Check the nightly "Purge Old Alerts" job</b> for the same kind of inefficiency as the other two.</li>
-  <li><b>Hardware upgrade is confirmed and scheduled</b> — R7 on 29 Jul, R10 on 30 Jul.
-    <span class="why">Good buffer for headroom, but not a substitute for the software fixes above — worth a fresh log check a few days after to confirm the real issues (filter, locking) actually improved, not just got less visible.</span></li>
+  <li><b>Hardware upgrade is complete</b> — DB servers now 16 cores/32GB, web servers 8 cores/16GB (Spark, 29 Jul).
+    <span class="why">Confirmed via post-upgrade data: headroom improved a lot, but KO (still filtered) only got 0–22% faster — proof this alone won't fix the filter or locking issues below.</span></li>
 </ol>
 
 </main>
 
 <footer>
-  Sources: FileMaker Server query/lock logs (R7 &amp; R10, 16–28 Jul 2026, including afternoon coverage on 28 Jul), Windows Performance Monitor captures (23–24 Jul 2026), and a full folder-structure scan of container storage on both servers. A detailed technical writeup with full supporting data is available on request.
+  Sources: FileMaker Server query/lock logs (R7 &amp; R10, 16–30 Jul 2026, including full 24-hour coverage of 28 Jul and logs spanning the 29 Jul hardware upgrade), Windows Performance Monitor captures (23–24 Jul, 21–22 Jul, and a post-upgrade capture on 29–30 Jul 2026), and a full folder-structure scan of container storage on both servers. A detailed technical writeup with full supporting data is available on request.
 </footer>
 
 <script>
 const textColor = '#8fa3b3';
 const gridColor = 'rgba(255,255,255,0.06)';
 
-// --- Load & latency over time (real per-day log data, 22-28 Jul) ---
-const dates = ['22 Jul','23 Jul','24 Jul','25 Jul','26 Jul','27 Jul','28 Jul','29 Jul*'];
+// --- Load & latency over time (real per-day log data, 22 Jul - 30 Jul) ---
+const dates = ['22 Jul','23 Jul','24 Jul','25 Jul','26 Jul','27 Jul','28 Jul','29 Jul AM','29 Jul PM','30 Jul*'];
 
 // [total seconds, {129: seconds, 147: seconds}]
-const r7Load  = [null, 7653, 16463, 703, 1691, 21092, 6790, 490];
-const r10Load = [1394, 20404, 18269, 1230, 2160, 30330, 7882, 513];
-const loadBreakdown7  = [null, [5943,1710],[13039,3424],[678,24],[1656,35],[16963,4129],[4543,2247],[275,215]];
-const loadBreakdown10 = [[1287,107],[18444,1960],[15244,3025],[1215,14],[2114,46],[26232,4098],[6325,1556],[312,201]];
+const r7Load  = [null, 7653, 16463, 703, 1691, 21092, 6790, 13091, 31, 3804];
+const r10Load = [1394, 20404, 18269, 1230, 2160, 30330, 7882, 5995, 84, 5350];
+const loadBreakdown7  = [null, [5943,1710],[13039,3424],[678,24],[1656,35],[16963,4129],[4543,2247],[10462,2629],[21,10],[2131,1673]];
+const loadBreakdown10 = [[1287,107],[18444,1960],[15244,3025],[1215,14],[2114,46],[26232,4098],[6325,1556],[4408,1587],[73,11],[4103,1246]];
 
-const r7Lat  = [null, 254.0, 345.1, 179.1, 180.4, 442.8, 295.9, 177.0];
-const r10Lat = [150.0, 376.4, 430.2, 296.8, 306.8, 671.5, 259.6, 184.4];
-const latBreakdown7  = [null, [442.0,174.3],[530.9,239.1],[182.0,33.2],[188.6,31.8],[545.1,339.3],[963.3,182.4],[533.4,171.7]];
-const latBreakdown10 = [[308.5,133.7],[944.1,154.8],[763.6,256.2],[400.6,25.4],[411.5,25.7],[1142.4,342.5],[1250.5,167.0],[221.8,156.1]];
+const r7Lat  = [null, 254.0, 345.1, 179.1, 180.4, 442.8, 295.9, 300.9, 3.9, 223.9];
+const r10Lat = [150.0, 376.4, 430.2, 296.8, 306.8, 671.5, 259.6, 274.1, 5.6, 438.9];
+const latBreakdown7  = [null, [442.0,174.3],[530.9,239.1],[182.0,33.2],[188.6,31.8],[545.1,339.3],[963.3,182.4],[927.9,189.8],[3.6,146.7],[1044.0,181.8]];
+const latBreakdown10 = [[308.5,133.7],[944.1,154.8],[763.6,256.2],[400.6,25.4],[411.5,25.7],[1142.4,342.5],[1250.5,167.0],[1031.2,170.6],[4.9,138.2],[1634.3,189.2]];
 
-const findCounts7  = [null, 11173, 17609, 1381, 3039, 22069, 11774, 1181];
-const findCounts10 = [2037, 16471, 15735, 1376, 2185, 18163, 8710, 1085];
+const findCounts7  = [null, 11173, 17609, 1381, 3039, 22069, 11774, 11393, 440, 7409];
+const findCounts10 = [2037, 16471, 15735, 1376, 2185, 18163, 8710, 7341, 330, 5853];
 
 function breakdownLines(bd) {
   if (!bd) return [];
@@ -289,8 +317,10 @@ new Chart(document.getElementById('loadChart'), {
         const ctx = items[0];
         const n = ctx.datasetIndex===0 ? findCounts7[ctx.dataIndex] : findCounts10[ctx.dataIndex];
         const lines = [];
-        if (n) lines.push(`Sum across ${n.toLocaleString()} finds that day`);
-        if (ctx.dataIndex === 7) lines.push('Partial day — logs run to ~9am only, before the R7 upgrade');
+        if (n) lines.push(`Sum across ${n.toLocaleString()} finds`);
+        if (ctx.dataIndex === 7) lines.push('Business hours before the upgrade landed (~5:55pm)');
+        if (ctx.dataIndex === 8) lines.push('Evening, after the upgrade landed — also just a quiet period');
+        if (ctx.dataIndex === 9) lines.push('Partial day — logs run to ~2pm only, fully post-upgrade');
         return lines;
       }
     }}
@@ -317,11 +347,44 @@ new Chart(document.getElementById('latencyChart'), {
 
 // --- CPU / RAM: point-in-time snapshots, not continuous data ---
 const cpuExtra = [
-  ['fmserver process peaked at 267% of one core', 'Upgrading 4→8 vCPU on 29 Jul'],
-  ['fmserver process peaked at 278% of one core', 'Upgrading 4→8 vCPU on 30 Jul'],
+  ['fmserver process peaked at 267% of one core', 'DB tier upgraded to 16 vCPU (29 Jul)'],
+  ['fmserver process peaked at 278% of one core', 'DB tier upgraded to 16 vCPU (29 Jul)'],
   ['WPE (java.exe) peaked at 17% · fmscwpc at 35%', 'Not CPU-bound — upgrade is precautionary'],
   ['WPE (java.exe) peaked at 16% · fmscwpc at 52%', 'Not CPU-bound — upgrade is precautionary'],
 ];
+
+// --- Before / after hardware upgrade (real data, both DB servers) ---
+new Chart(document.getElementById('upgradeCpuChart'), {
+  type:'bar',
+  data:{labels:['R7 DB','R10 DB'], datasets:[
+    {label:'Mean CPU — before', data:[10,9], backgroundColor:'#eb6834'},
+    {label:'Mean CPU — after', data:[2,2], backgroundColor:'#3ecf8e'},
+    {label:'Worst moment — before', data:[100,100], backgroundColor:'#f5a623'},
+    {label:'Worst moment — after', data:[58,64], backgroundColor:'#4fb0ff'},
+  ]},
+  options:{responsive:true, plugins:{
+    title:{display:true,text:'Total CPU %: before vs. after upgrade',color:'#e7edf2', font:{size:13}},
+    legend:{labels:{color:textColor,font:{size:10}}}
+  },
+    scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor},grid:{color:gridColor}, max:110}}}
+});
+
+new Chart(document.getElementById('upgradeRamChart'), {
+  type:'bar',
+  data:{labels:['R7 DB','R10 DB'], datasets:[
+    {label:'Available RAM, worst moment — before (MB)', data:[4421,4546], backgroundColor:'#f0563d'},
+    {label:'Available RAM, worst moment — after (MB)', data:[21864,22442], backgroundColor:'#3ecf8e'},
+  ]},
+  options:{responsive:true, plugins:{
+    title:{display:true,text:'Available RAM at worst moment: before vs. after',color:'#e7edf2', font:{size:13}},
+    legend:{labels:{color:textColor,font:{size:10}}},
+    tooltip:{callbacks:{afterLabel:(ctx)=>{
+      const totals = ctx.dataIndex===0 ? ['16GB installed → 32GB'] : ['16GB installed → 32GB'];
+      return totals;
+    }}}
+  },
+    scales:{x:{ticks:{color:textColor},grid:{color:gridColor}}, y:{ticks:{color:textColor,callback:v=>v.toLocaleString()+'MB'},grid:{color:gridColor}}}}
+});
 
 new Chart(document.getElementById('cpuChart'), {
   type:'bar',
@@ -338,10 +401,10 @@ new Chart(document.getElementById('cpuChart'), {
 });
 
 const memExtra = [
-  ['% Committed: mean 58%, max 71%', '16GB installed → upgrading to 24GB'],
-  ['% Committed: mean 52%, max 69%', '16GB installed → upgrading to 24GB'],
-  ['8GB installed → upgrading to 16GB', 'java.exe (WPE) working set up to ~2.5GB'],
-  ['8GB installed → upgrading to 16GB', 'WebDirect concurrency trending upward'],
+  ['% Committed: mean 58%, max 71%', '16GB installed → upgraded to 32GB'],
+  ['% Committed: mean 52%, max 69%', '16GB installed → upgraded to 32GB'],
+  ['8GB installed → upgraded to 16GB', 'java.exe (WPE) working set up to ~2.5GB'],
+  ['8GB installed → upgraded to 16GB', 'WebDirect concurrency trending upward'],
 ];
 
 new Chart(document.getElementById('memChart'), {
