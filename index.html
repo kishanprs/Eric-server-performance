@@ -103,7 +103,7 @@
   <div class="eyebrow">Incident summary · plain-language version</div>
   <h1>Eric System — Slowdown Investigation</h1>
   <p>What happened, what we've confirmed, and what's still being fixed — for Switched On stakeholders</p>
-  <div class="updated">Updated through 29 Jul (partial) <span style="opacity:.7;">— dotted numbers show more detail on hover</span></div>
+  <div class="updated">Updated through 5 Aug (partial) <span style="opacity:.7;">— dotted numbers show more detail on hover</span></div>
 </header>
 
 <main>
@@ -123,7 +123,9 @@
   <div class="tl-step"><div class="tl-dot warn"></div><div class="tl-date">Tue 28 Jul, PM</div><div class="tl-label">Afternoon data confirms Docs fix, reveals separate Charge Work locking issue</div></div>
   <div class="tl-step"><div class="tl-dot good"></div><div class="tl-date">Wed 29 Jul, evening</div><div class="tl-label">Hardware upgrade completed — DB servers to 16-core/32GB, web to 8-core/16GB</div></div>
   <div class="tl-step"><div class="tl-dot warn"></div><div class="tl-date">30 Jul</div><div class="tl-label">Post-upgrade check: headroom way up, but KO barely faster — confirms it's not a hardware problem</div></div>
-  <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">Now</div><div class="tl-label">Awaiting Digital Fusion fix for both the filter and the locking issue</div></div>
+  <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">Mon 3 Aug</div><div class="tl-label">WebDirect filter re-enabled for trades — "My Lines" and "All Lines"</div></div>
+  <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">Tue 4 Aug, evening</div><div class="tl-label">CAR templates added</div></div>
+  <div class="tl-step"><div class="tl-dot"></div><div class="tl-date">Now</div><div class="tl-label">New logs reviewed through 5 Aug (AM) — no clear extra hit from the re-enabled filter; still awaiting Digital Fusion's fix</div></div>
 </div>
 
 <h2>The two problem screens, where they stand today</h2>
@@ -163,8 +165,16 @@
   <p>KO customers still have the original filter switched on, so comparing their speed <b>before vs. after</b> the hardware upgrade isolates the hardware effect specifically — same query logic, dramatically more CPU and RAM. If they'd sped up close to as much as the CPU/RAM did (4x and 2x), that would point at hardware as the real constraint. Instead <span class="hint" data-tip="Charge Work median: R7 1,097.5ms→999.2ms (-9%),&#10;R10 2,109.9ms→1,651.8ms (-22%)&#10;Docs median: R7 383.8ms→310.0ms (-19%),&#10;R10 319.6ms→325.1ms (~0%)">KO improved only 0–22%</span> and remains 3–8x slower than desktop users doing the same thing. That means the cost is baked into the query itself, not how much compute is behind it — so re-enabling the filter for everyone would spread that same expensive query across a much bigger group of users, not fix it. Recommend holding off until Digital Fusion's fix to the filter logic actually lands.</p>
 </div>
 
+<h2>Update — since the filter was re-enabled (3–5 Aug)</h2>
+<div class="issue-card">
+  <p><b>What changed:</b> On <b>3 Aug</b> the WebDirect "My Lines" / "All Lines" filter was switched back on for trades. On <b>4 Aug evening</b>, CAR templates were added. We pulled fresh logs (3–5 Aug) and a new Perfmon capture (morning of 5 Aug) to check for impact.</p>
+  <p><b style="color:var(--accent);">No clear new hit from the filter.</b> Charge Work median find times since 3 Aug <span class="hint" data-tip="Median find time, table 129, Query (Find) only:&#10;R7 — 3 Aug 529.8ms, 4 Aug 953.1ms&#10;R10 — 3 Aug 1,318.8ms, 4 Aug 1,658.1ms&#10;(5 Aug is a partial, mostly-quiet morning window)">(530ms–1.7s across R7/R10)</span> are in the same elevated range already logged on 30 Jul <span class="hint" data-tip="30 Jul median, table 129:&#10;R7 — 1,044.0ms&#10;R10 — 1,634.3ms">(1.0–1.6s)</span> — that's the pre-existing locking issue, not an obvious extra hit from re-enabling the filter. Docs stayed steady too (~160–185ms, same as before). Nothing in the logs points to CAR templates causing a slowdown either.</p>
+  <p><b style="color:var(--bad);">One new outlier worth watching.</b> A single WebDirect connection on R10 froze for <span class="hint" data-tip="R10, 3 Aug ~7:50pm — one WebDirect&#10;client, table 129 (Charge Work).&#10;Wait time alone: 97.8 seconds.&#10;Single account, not a multi-user collision.">~98 seconds</span> on the evening of 3 Aug — longer than the previous 28.4-second worst case — but it was one account, not a multi-user pile-up like 28 Jul, and happened outside peak hours. Keeping an eye on it rather than treating it as a new pattern yet.</p>
+  <p>The 5 Aug morning Perfmon capture (08:50–09:16am) shows CPU and RAM still comfortable, matching the post-upgrade baseline <span class="hint" data-tip="5 Aug AM capture:&#10;R7 DB — CPU mean 3%, max 11%; 22.9GB RAM free&#10;R10 DB — CPU mean 2%, max 46%; 23.2GB RAM free&#10;Both well within post-upgrade headroom">(both DB servers 22+ GB RAM free; CPU mean 2–3%, brief peak to 46% on R10)</span>. Disk time ticked up versus the ~3% post-upgrade mean <span class="hint" data-tip="5 Aug AM % Disk Time:&#10;R7 — mean 7%, max 103%&#10;R10 — mean 6%, max 194%&#10;Short (~25 min), early-morning window — not enough to call a trend">(R7 7% mean/103% peak, R10 6% mean/194% peak)</span> — the capture window is short and early, so this isn't conclusive; folded into the still-open disk-activity question rather than treated as a new finding.</p>
+</div>
+
 <h2>Load &amp; latency over time</h2>
-<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Real per-day figures from the server logs, 22–30 Jul. <b>29 Jul is split at the upgrade cutover (~5:55pm)</b> so the hardware change doesn't get blended into one misleading daily average; <b>30 Jul* is partial</b> — logs run to ~2pm only. The left chart is a <b>sum across every find</b> (thousands of them), not one continuous stall — hover for the exact find count. The right chart is the median time per individual find. Don't read "29 Jul PM" as proof the upgrade fixed everything — it's also just evening, when volume drops anyway (see the 25–26 Jul weekend dip, and the full day-shape breakdown earlier in this report). <b>30 Jul is the fairer test:</b> a full business day, fully after the upgrade — and it's still elevated versus the floor, consistent with the filter/locking issues being unresolved.</p>
+<p style="color:var(--sub);font-size:12.5px;margin:-6px 0 12px;">Real per-day figures from the server logs, 22 Jul–5 Aug. <b>29 Jul is split at the upgrade cutover (~5:55pm)</b> so the hardware change doesn't get blended into one misleading daily average; <b>30 Jul*, 3 Aug*, and 5 Aug* are partial</b> days (logs start or end mid-day). The left chart is a <b>sum across every find</b> (thousands of them), not one continuous stall — hover for the exact find count. The right chart is the median time per individual find. Don't read "29 Jul PM" as proof the upgrade fixed everything — it's also just evening, when volume drops anyway. <b>30 Jul and 4 Aug are the fairer tests:</b> full business days — and Charge Work is still elevated versus the floor on both, in line with the still-unresolved locking issue rather than a new regression from the 3 Aug filter re-enable.</p>
 <div class="chart-row">
   <div class="chart-panel"><canvas id="loadChart"></canvas></div>
   <div class="chart-panel"><canvas id="latencyChart"></canvas></div>
@@ -270,7 +280,7 @@
 </main>
 
 <footer>
-  Sources: FileMaker Server query/lock logs (R7 &amp; R10, 16–30 Jul 2026, including full 24-hour coverage of 28 Jul and logs spanning the 29 Jul hardware upgrade), Windows Performance Monitor captures (23–24 Jul, 21–22 Jul, and a post-upgrade capture on 29–30 Jul 2026), and a full folder-structure scan of container storage on both servers. A detailed technical writeup with full supporting data is available on request.
+  Sources: FileMaker Server query/lock logs (R7 &amp; R10, 16 Jul–5 Aug 2026, including full 24-hour coverage of 28 Jul, logs spanning the 29 Jul hardware upgrade, and the 3–5 Aug filter re-enable / CAR template window), Windows Performance Monitor captures (23–24 Jul, 21–22 Jul, a post-upgrade capture on 29–30 Jul, and a new capture on the morning of 5 Aug 2026), and a full folder-structure scan of container storage on both servers. A detailed technical writeup with full supporting data is available on request.
 </footer>
 
 <script>
@@ -278,21 +288,21 @@ const textColor = '#8fa3b3';
 const gridColor = 'rgba(255,255,255,0.06)';
 
 // --- Load & latency over time (real per-day log data, 22 Jul - 30 Jul) ---
-const dates = ['22 Jul','23 Jul','24 Jul','25 Jul','26 Jul','27 Jul','28 Jul','29 Jul AM','29 Jul PM','30 Jul*'];
+const dates = ['22 Jul','23 Jul','24 Jul','25 Jul','26 Jul','27 Jul','28 Jul','29 Jul AM','29 Jul PM','30 Jul*','3 Aug*','4 Aug','5 Aug*'];
 
 // [total seconds, {129: seconds, 147: seconds}]
-const r7Load  = [null, 7653, 16463, 703, 1691, 21092, 6790, 13091, 31, 3804];
-const r10Load = [1394, 20404, 18269, 1230, 2160, 30330, 7882, 5995, 84, 5350];
-const loadBreakdown7  = [null, [5943,1710],[13039,3424],[678,24],[1656,35],[16963,4129],[4543,2247],[10462,2629],[21,10],[2131,1673]];
-const loadBreakdown10 = [[1287,107],[18444,1960],[15244,3025],[1215,14],[2114,46],[26232,4098],[6325,1556],[4408,1587],[73,11],[4103,1246]];
+const r7Load  = [null, 7653, 16463, 703, 1691, 21092, 6790, 13091, 31, 3804, 1425, 6593, 277];
+const r10Load = [1394, 20404, 18269, 1230, 2160, 30330, 7882, 5995, 84, 5350, 2499, 12722, 593];
+const loadBreakdown7  = [null, [5943,1710],[13039,3424],[678,24],[1656,35],[16963,4129],[4543,2247],[10462,2629],[21,10],[2131,1673],[977,448],[4206,2386],[144,133]];
+const loadBreakdown10 = [[1287,107],[18444,1960],[15244,3025],[1215,14],[2114,46],[26232,4098],[6325,1556],[4408,1587],[73,11],[4103,1246],[1733,766],[10893,1829],[361,232]];
 
-const r7Lat  = [null, 254.0, 345.1, 179.1, 180.4, 442.8, 295.9, 300.9, 3.9, 223.9];
-const r10Lat = [150.0, 376.4, 430.2, 296.8, 306.8, 671.5, 259.6, 274.1, 5.6, 438.9];
-const latBreakdown7  = [null, [442.0,174.3],[530.9,239.1],[182.0,33.2],[188.6,31.8],[545.1,339.3],[963.3,182.4],[927.9,189.8],[3.6,146.7],[1044.0,181.8]];
-const latBreakdown10 = [[308.5,133.7],[944.1,154.8],[763.6,256.2],[400.6,25.4],[411.5,25.7],[1142.4,342.5],[1250.5,167.0],[1031.2,170.6],[4.9,138.2],[1634.3,189.2]];
+const r7Lat  = [null, 254.0, 345.1, 179.1, 180.4, 442.8, 295.9, 300.9, 3.9, 223.9, 175.3, 292.1, 157.8];
+const r10Lat = [150.0, 376.4, 430.2, 296.8, 306.8, 671.5, 259.6, 274.1, 5.6, 438.9, 246.7, 499.9, 153.6];
+const latBreakdown7  = [null, [442.0,174.3],[530.9,239.1],[182.0,33.2],[188.6,31.8],[545.1,339.3],[963.3,182.4],[927.9,189.8],[3.6,146.7],[1044.0,181.8],[529.8,170.4],[953.1,185.1],[8.9,164.7]];
+const latBreakdown10 = [[308.5,133.7],[944.1,154.8],[763.6,256.2],[400.6,25.4],[411.5,25.7],[1142.4,342.5],[1250.5,167.0],[1031.2,170.6],[4.9,138.2],[1634.3,189.2],[1318.8,163.7],[1658.1,182.4],[14.9,157.3]];
 
-const findCounts7  = [null, 11173, 17609, 1381, 3039, 22069, 11774, 11393, 440, 7409];
-const findCounts10 = [2037, 16471, 15735, 1376, 2185, 18163, 8710, 7341, 330, 5853];
+const findCounts7  = [null, 11173, 17609, 1381, 3039, 22069, 11774, 11393, 440, 7409, 3254, 12035, 1000];
+const findCounts10 = [2037, 16471, 15735, 1376, 2185, 18163, 8710, 7341, 330, 5853, 3939, 11485, 1304];
 
 function breakdownLines(bd) {
   if (!bd) return [];
@@ -321,6 +331,9 @@ new Chart(document.getElementById('loadChart'), {
         if (ctx.dataIndex === 7) lines.push('Business hours before the upgrade landed (~5:55pm)');
         if (ctx.dataIndex === 8) lines.push('Evening, after the upgrade landed — also just a quiet period');
         if (ctx.dataIndex === 9) lines.push('Partial day — logs run to ~2pm only, fully post-upgrade');
+        if (ctx.dataIndex === 10) lines.push('Partial day — logs start ~1-3pm; filter re-enabled for trades this day');
+        if (ctx.dataIndex === 11) lines.push('Full day — first full business day with the filter re-enabled; CAR templates added this evening');
+        if (ctx.dataIndex === 12) lines.push('Partial day — logs run only to ~9:10am');
         return lines;
       }
     }}
